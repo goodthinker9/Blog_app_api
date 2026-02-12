@@ -1,15 +1,18 @@
 import express from "express"
-import cors from "cors";
-import dotenv from "dotenv";
 import postRoutes from "./routes/posts.js"
+import userRoutes from "./routes/users.js"
+import authRoutes from "./routes/auth.js"
+import dotenv from "dotenv";
+dotenv.config();
+
 const app=express()
 
 app.use(express.json())
-// app.get("/test",(req,res)=>{
-//     res.json("it works")
-// })
+
 
 app.use("/api/posts",postRoutes)
+app.use("/api/auth",authRoutes)
+app.use("/api/users",userRoutes)
 app.listen(8800,()=>{
     console.log("connected")
 })
