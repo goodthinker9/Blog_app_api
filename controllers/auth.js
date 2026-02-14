@@ -1,6 +1,11 @@
 import { db } from "../db.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken"
+import cookieParser from "cookie-parser";
+import express from "express"
+const app=express()
+app.use(cookieParser());
+
 
 export const register = async (req, res) => {
   // Check if user exists
@@ -41,24 +46,33 @@ export const register = async (req, res) => {
 };
 
 export const login = (req, res) => {
-    //check users
+    const q = "SELECT * FROM users WHERE username=?";
 
-    const q="SELECT *FROM users WHERE username=?"
+    db.query(q, [req.body.username], (err, data) => {
+        if (err) return res.status(500).json(err);
+        if (data.length === 0) return res.status(404).json("User not found");
 
-    db.query(q,[req.body.username],(err,data)=>{
-      if(err) return res.json(err);
-      if(data.length===0) return res.status(404).json("user is not found!")
-    })
+        // check password
+        const isPasswordCorrect = bcrypt.compareSync(req.body.password, data[0].password); 
+        if (!isPasswordCorrect) return res.status(400).json("Wrong username or password");
 
-    //check password
-    const isPasswordCorrect=bcrypt.compareSync(req.body.password,data[0].password); 
+        // create JWT
+        const token = jwt.sign({ id: data[0].id }, "jwtkey");
 
-    if(!isPasswordCorrect) return res.status(400).json("wrong username or password")
+        // exclude password from response
+        const { password, ...other } = data[0];
 
-      const token=jwt.sign({id:data[0].id},"jwtkey");
-      res.cookie("access_token",token,{
-        httpOnly:true
-      }).status(200).json(data[0])
+        // send cookie + user info
+        res
+          .cookie("access_token", token, { httpOnly: true })
+          .status(200)
+          .json(other);
+    });
 };
 
-export const logout = (req, res) => {};
+export const logout = (req, res) => {
+
+  res.clearCookie("access_token",{
+    sameSite:"none",secure:true
+  }).status(200).json("user has been logged out.")
+};
